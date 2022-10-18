@@ -1,5 +1,3 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -7,19 +5,21 @@ using UnityEngine.UI;
 
 public class HUDPage : PageBase
 {
-    Queue activeQueue = Queue.MainQueue;
+    private int activeQueueIndex  = 0;
+    Dictionary<int, QueuePanel> queuePanels = new Dictionary<int, QueuePanel>();
 
     [Header("Task")]
     [SerializeField] private TaskSlot slotPrefab;
     [SerializeField] private Transform taskSlotsParent;
     [Space]
-    [SerializeField] private GameObject mainQueue;
-    [SerializeField] private Transform mainQueueParent;
+    [SerializeField] private QueuePanel queuePanelPrefab;
+    //[SerializeField] private GameObject mainQueue;
+    [SerializeField] private Transform queuePanelParent;
 
-    [Space]
-    [SerializeField] private GameObject productionQueue;
-    [SerializeField] private Transform productionQueueParent;
-    
+    //[Space]
+    //[SerializeField] private GameObject productionQueue;
+    //[SerializeField] private Transform productionQueueParent;
+
     [Header("Button")]
     [SerializeField] private GameObject nextLevelObject;
     private Button nextLevelButton;
@@ -33,17 +33,13 @@ public class HUDPage : PageBase
     [SerializeField] private Sprite stopSprite;
     [SerializeField] private Sprite retrySprite;
 
-    public enum Queue
-    {
-        MainQueue,
-        ProductionQueue
-    }
-
     public override void SetValues()
     {
         CreateTaskSlots();
-        mainQueueParent.DestroyChildren();
-        productionQueueParent.DestroyChildren();
+        foreach(var panel in queuePanels.Values)
+        {
+            panel.Destroy();
+        }
 
         CheckProductionMode();
     }
@@ -63,46 +59,78 @@ public class HUDPage : PageBase
 
     private void CheckProductionMode()
     {
+        queuePanels = new Dictionary<int, QueuePanel>();
+
+        var mainQueuePanel = Instantiate(queuePanelPrefab, queuePanelParent);
+        mainQueuePanel.Create(0);
+
+        queuePanels.Add(0, mainQueuePanel);
+
         if (GameManager.instance.StageController.HasProductionTask)
         {
             Debug.Log("Create");
-            productionQueue.SetActive(true);
+            //productionQueue.SetActive(true);
 
-            var newParent = new GameObject("Queue Parent");
-            newParent.transform.SetParent(transform);
-            var group = newParent.AddComponent<ToggleGroup>();
+            var group = queuePanelParent.gameObject.AddComponent<ToggleGroup>();
 
-            productionQueue.transform.SetParent(newParent.transform);
-            var productionToggle = productionQueue.AddComponent<Toggle>();
-            productionToggle.group = group;
-            productionToggle.targetGraphic = productionQueue.GetComponentInChildren<Image>();
-            productionToggle.onValueChanged.AddListener((value) =>
+            var count = GameManager.instance.StageController.GetAvailableTasks().FindAll(x => x is Production).Count;
+            for (int i = 0; i < count; i++)
             {
-                if (value)
-                {
-                    activeQueue = Queue.ProductionQueue;
-                }
-            });
+                var panelIndex = i + 1;
+                var newQueuePanel = Instantiate(queuePanelPrefab, transform);
+                var toggle = newQueuePanel.Create(panelIndex, queuePanelParent);
+                GameManager.instance.QueueController.AddOtherQueue(new List<TaskBase>());
 
-            mainQueue.transform.SetParent(newParent.transform);
-            var mainToggle = mainQueue.AddComponent<Toggle>();
-            mainToggle.group = group;
-            mainToggle.targetGraphic = mainQueue.GetComponentInChildren<Image>();
+                toggle.onValueChanged.AddListener((value) =>
+                {
+                    ToggleListener(value, panelIndex);
+                });
+
+                queuePanels.Add(panelIndex, newQueuePanel);
+            }
+
+            //productionQueue.transform.SetParent(newParent.transform);
+            //var productionToggle = productionQueue.AddComponent<Toggle>();
+            //productionToggle.group = group;
+            //productionToggle.targetGraphic = productionQueue.GetComponentInChildren<Image>();
+            //productionToggle.onValueChanged.AddListener((value) =>
+            //{
+            //    if (value)
+            //    {
+            //        activeQueue = Queue.ProductionQueue;
+            //    }
+            //});
+
+
+            var mainToggle = mainQueuePanel.Create(0, queuePanelParent);
             mainToggle.onValueChanged.AddListener((value) =>
             {
-                if (value)
-                {
-                    activeQueue = Queue.MainQueue;
-                }
+                ToggleListener(value, 0);
             });
 
-            mainToggle.isOn = true;
+            //mainQueue.transform.SetParent(newParent.transform);
+            //var mainToggle = mainQueue.AddComponent<Toggle>();
+            //mainToggle.group = group;
+            //mainToggle.targetGraphic = mainQueue.GetComponentInChildren<Image>();
+            //mainToggle.onValueChanged.AddListener((value) =>
+            //{
+            //    if (value)
+            //    {
+            //        activeQueue = Queue.MainQueue;
+            //    }
+            //});
 
-            activeQueue = Queue.MainQueue;
+            //mainToggle.isOn = true;
+            //mainToggle.isOn = true;
+            //activeQueue = Queue.MainQueue;
         }
-        else
+
+        void ToggleListener(bool value, int panelIndex)
         {
-            productionQueue.SetActive(false);
+            if (value)
+            {
+                activeQueueIndex = panelIndex;
+            }
         }
     }
 
@@ -126,7 +154,7 @@ public class HUDPage : PageBase
                     //stop mode
                     GameManager.instance.State = GameManager.GameState.StageStarted;
                     break;
-                case GameManager.GameState.FinishTasks:
+                case GameManager.GameState.CompleteTasks:
                     //retry mode
                     GameManager.instance.State = GameManager.GameState.StageStarted;
                     break;
@@ -154,10 +182,10 @@ public class HUDPage : PageBase
         foreach (var task in tasks)
         {
             var newSlot = Instantiate(slotPrefab, taskSlotsParent);
-            newSlot.Init(task, false);
+            newSlot.Init(task, -1);
             newSlot.SetButtonAction(() =>
             {
-                TaskQueueController.AddTask(task, activeQueue == Queue.MainQueue);
+                GameManager.instance.QueueController.AddTask(task, activeQueueIndex);
                 AddQueueTask(task);
             });
         }
@@ -165,14 +193,9 @@ public class HUDPage : PageBase
 
     public void AddQueueTask(TaskBase task)
     {
-        Transform parent = activeQueue == Queue.MainQueue ? mainQueueParent : productionQueueParent;
+        Transform parent = queuePanels[activeQueueIndex].Contant;
         var newSlot = Instantiate(slotPrefab, parent);
-        newSlot.Init(task, true);
-        newSlot.SetButtonAction(() =>
-        {
-            TaskQueueController.RemoveTask(task, activeQueue == Queue.MainQueue);
-            Destroy(newSlot.gameObject);
-        });
+        newSlot.Init(task, activeQueueIndex);
     }
 
     private void RemoveQueueTask(TaskBase oldTask)
@@ -188,7 +211,7 @@ public class HUDPage : PageBase
 
     private void ActiveNextLevelButton(GameManager.GameState state)
     {
-        if (state == GameManager.GameState.FinishTasks && GameManager.instance.StageController.CheckLights())
+        if (state == GameManager.GameState.CompleteTasks && GameManager.instance.StageController.CheckLights())
         {
             nextLevelObject.SetActive(true);
         }
@@ -212,7 +235,7 @@ public class HUDPage : PageBase
                 playButtonImage.sprite = stopSprite;
                 playButtonText.SetText("Stop");
                 break;
-            case GameManager.GameState.FinishTasks:
+            case GameManager.GameState.CompleteTasks:
                 //retry mode
                 playButtonImage.sprite = retrySprite;
                 playButtonText.SetText("Retry");

@@ -9,5 +9,12 @@ public abstract class TaskBase :ScriptableObject
 
     public Sprite Icon => icon;
 
+    public System.Action<bool> onComplete;
+
     public abstract bool Run(Transform characterTransform);
+
+    protected void OnComplete(bool value)
+    {
+        onComplete?.Invoke(value);
+    }
 }

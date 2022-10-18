@@ -12,7 +12,8 @@ public class Rotate : TaskBase
         var endValue = diraction == Diraction.ToRight ? characterTransform.eulerAngles - new Vector3(0, 90, 0) : characterTransform.eulerAngles + new Vector3(0, 90, 0);
         characterTransform.DORotate(endValue, 1).OnComplete(() =>
         {
-            TaskQueueController.CompleteTask();
+            //TaskQueue.CompleteTask();
+            OnComplete(true);
         });
         return true;
     }

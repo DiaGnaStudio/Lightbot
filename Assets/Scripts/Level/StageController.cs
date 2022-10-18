@@ -6,14 +6,34 @@ public class StageController : MonoBehaviour
 {
     [SerializeField] private List<Block> blocks = new List<Block>();
     [SerializeField] private Block startBlock;
+    List<LightBlock> lightBlocks = new List<LightBlock>();
 
     [Tooltip("The tasks you want are available at this stage")]
     [SerializeField] private List<TaskBase> availableTask;
 
     Quaternion startedRotation;
     public Block CurrentBlock { get; private set; }
-
     public bool HasProductionTask { get; private set; }
+
+    public void Initialization(Transform character)
+    {
+        if (startBlock == null) startBlock = blocks[0];
+
+        foreach (var block in blocks)
+        {
+            if (block is LightBlock light)
+            {
+                lightBlocks.Add(light);
+            }
+        }
+
+        HasProductionTask = availableTask.Find(x => x is Production);
+
+        character.position = startBlock.transform.position;
+        startedRotation = character.localRotation;
+        SuccessMove(startBlock);
+        character.SetParent(transform);
+    }
 
     public void NextBlock(Transform characterTransform, ref Block nextBlock, ref float height)
     {
@@ -77,26 +97,6 @@ public class StageController : MonoBehaviour
         }
     }
 
-    public void Initialization(Transform character)
-    {
-        if (startBlock == null) startBlock = blocks[0];
-
-        foreach (var block in blocks)
-        {
-            if (block is LightBlock light)
-            {
-                lightBlocks.Add(light);
-            }
-        }
-
-        HasProductionTask = availableTask.Find(x => x is Production);
-
-        character.position = startBlock.transform.position;
-        startedRotation = character.localRotation;
-        SuccessMove(startBlock);
-        character.SetParent(transform);
-    }
-
     public void ResetCharacter(Transform character)
     {
         character.position = startBlock.transform.position;
@@ -104,16 +104,15 @@ public class StageController : MonoBehaviour
         SuccessMove(startBlock);
     }
 
-    public void FailMove()
-    {
-        Debug.Log("Faild move! ");
-        GameManager.instance.State = GameManager.GameState.FinishTasks;
-    }
+    //public void FailMove()
+    //{
+    //    Debug.Log("Faild move! ");
+    //    GameManager.instance.State = GameManager.GameState.CompleteTasks;
+    //}
 
     public void SuccessMove(Block block)
     {
         CurrentBlock = block;
-        CurrentBlock.Reaching();
     }
 
     public bool CheckLights()
@@ -127,8 +126,6 @@ public class StageController : MonoBehaviour
         }
         return true;
     }
-
-    List<LightBlock> lightBlocks = new List<LightBlock>();
 
     public void ResetLights()
     {

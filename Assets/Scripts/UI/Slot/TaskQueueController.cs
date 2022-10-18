@@ -1,14 +1,48 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 
-public static class TaskQueueController
+public class TaskQueueController : MonoBehaviour
 {
-    private static Queue mainQueue = new Queue(new List<TaskBase>());
-    private static Queue productionQueue = new Queue(new List<TaskBase>());
+    List<Queue> queues = new List<Queue>();
+
+    private void Start()
+    {
+        queues = new List<Queue>
+        {
+            new Queue(new List<TaskBase>()) // main queue
+        };
+    }
+
+    private void OnDestroy()
+    {
+        queues = new List<Queue>
+        {
+            new Queue(new List<TaskBase>()) // main queue
+        };
+    }
+
+    public void AddOtherQueue(List<TaskBase> tasks)
+    {
+        queues.Add(new Queue(tasks));
+    }
+
+    public void AddTask(TaskBase newTask, int queueIndex = 0)
+    {
+        queues[queueIndex].Add(newTask);
+    }
+
+    public void RemoveTask(TaskBase oldTask, int queueIndex = 0)
+    {
+        queues[queueIndex].Remove(oldTask);
+    }
 
     public struct Queue
     {
-        public List<TaskBase> Tasks { get;private set; }
+        public List<TaskBase> Tasks { get; private set; }
 
+        private Queue<TaskBase> queue;
+
+        public System.Action<bool> onComplete;
         public System.Action<TaskBase> TaskAdded;
         public System.Action<TaskBase> TaskRemoved;
 
@@ -32,76 +66,89 @@ public static class TaskQueueController
                 TaskRemoved?.Invoke(oldTask);
             }
         }
+
+        public TaskBase Peek()
+        {
+            return queue.Peek();
+        }
+
+        public TaskBase Dequeue()
+        {
+            return queue.Dequeue();
+        }
+
+        public void Run()
+        {
+            if (queue == null)
+            {
+                queue = new Queue<TaskBase>(Tasks);
+            }
+            else if (queue.Count == 0)
+            {
+                onComplete?.Invoke(true);
+                return;
+            }
+            var task = Dequeue();
+            task.onComplete = CompleteTask;
+            GameManager.instance.TaskRunner.PlayTask(task);
+        }
+
+        private void CompleteTask(bool value)
+        {
+            if (value)
+            {
+                Run();
+            }
+            else
+            {
+                Debug.Log("FAILED!");
+                onComplete?.Invoke(false);
+                GameManager.instance.State = GameManager.GameState.FailedTasks;
+            }
+        }
     }
 
-    public static void AddTask(TaskBase newTask, bool isMainTask = true)
+    public Queue GetProductionQueue()
     {
-        if (isMainTask || !GameManager.instance.StageController.HasProductionTask)
+        //TODO: We have a production list for now, this should be changed later
+        return queues[1];
+    }
+
+    public List<TaskBase> GetProductionTask()
+    {
+        return GetProductionQueue().Tasks;
+    }
+
+    #region RUN QUEUE
+
+    const int mainQueueIndex = 0;
+
+    public void Run()
+    {
+        var x = queues[mainQueueIndex];
+        x.onComplete = CompleteQueue;
+        x.Run();
+    }
+
+    /// <summary>
+    /// call when all queue are complete
+    /// </summary>
+    /// <param name="value"></param>
+    private void CompleteQueue(bool value)
+    {
+        if (value)
         {
-            if (mainQueue.Tasks.Count >= 12) return;
-            mainQueue.Add(newTask);
+            // success
+            Debug.Log("All task done!");
+            GameManager.instance.State = GameManager.GameState.CompleteTasks;
         }
         else
         {
-            if (productionQueue.Tasks.Count >= 8) return;
-            productionQueue.Add(newTask);
+            // failed
+            Debug.Log("Have a problem!");
+            GameManager.instance.State = GameManager.GameState.FailedTasks;
         }
     }
 
-    public static void RemoveTask(TaskBase oldTask, bool isMainTask = true)
-    {
-        if (isMainTask || !GameManager.instance.StageController.HasProductionTask)
-        {
-            mainQueue.Remove(oldTask);
-        }
-        else
-        {
-            productionQueue.Remove(oldTask);
-        }
-    }
-
-    static int index = 0;
-    static int pIndex = 0;
-    static TaskBase lastTask;
-
-    public static void PlayTasks()
-    {
-        if (mainQueue.Tasks.Count == 0)
-        {
-            return;
-        }
-        NextTask();
-    }
-
-    public static void CompleteTask()
-    {
-        if (GameManager.instance.State != GameManager.GameState.Play) return;
-        if (mainQueue.Tasks.Count <= index)
-        {
-            GameManager.instance.State = GameManager.GameState.FinishTasks;
-        }
-        else
-        {
-            NextTask();
-        }
-    }
-
-    private static void NextTask()
-    {
-        var task = mainQueue.Tasks[index++];
-        lastTask = task;
-        GameManager.instance.TaskRunner.PlayTask(task);
-    }
-
-    public static void ResetIndex()
-    {
-        index = 0;
-    }
-
-    public static void Reset()
-    {
-        ResetIndex();
-        mainQueue.Tasks.Clear();
-        productionQueue.Tasks.Clear();
-    }
+    #endregion
 }

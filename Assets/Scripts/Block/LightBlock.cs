@@ -8,11 +8,6 @@ public class LightBlock : Block
 
     public State CurrentState { get; private set; } = State.IsOff;
 
-    public override void Reaching()
-    {
-        //
-    }
-
     public void SwitchState()
     {
         if (CurrentState == State.IsOff)

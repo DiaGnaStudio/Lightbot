@@ -7,30 +7,28 @@ public class TaskSlot : MonoBehaviour
     [SerializeField] private Button _button;
     [SerializeField] private Image _icon;
 
+    int queueIndex = 0;
+
     public void SetButtonAction(System.Action callback)
     {
         _button.onClick.RemoveAllListeners();
         _button.onClick.AddListener(() => callback?.Invoke());
     }
 
-    public void Init(TaskBase task, bool inTaskQueue = false)
+    public void Init(TaskBase task, int queueIndex = 0)
     {
         _icon.sprite = task.Icon;
+        this.queueIndex = queueIndex;
 
-        //_button.onClick.RemoveAllListeners();
-        //_button.onClick.AddListener(() =>
-        //{
-        //    if (inTaskQueue)
-        //    {
-        //        //remove from task queue
-        //        TaskQueueController.RemoveTask(task);
-        //        Destroy(gameObject);
-        //    }
-        //    else
-        //    {
-        //        //add to task queue
-        //        TaskQueueController.AddTask(task);
-        //    }
-        //});
+        var page = UI_Manager.instance.GetPageOfType<HUDPage>();
+        if (queueIndex != -1)
+        {
+            _button.onClick.RemoveAllListeners();
+            _button.onClick.AddListener(() =>
+            {
+                GameManager.instance.QueueController.RemoveTask(task, queueIndex);
+                Destroy(gameObject);
+            });
+        }
     }
 }

@@ -8,8 +8,10 @@ public class GameManager : MonoBehaviour
     [Header("Components")]
     [SerializeField] UI_Manager uiManagerPrefab;
     [SerializeField] SaveOrLoadManager saveManager;
+    [SerializeField] TaskQueueController queueController;
 
     public SaveOrLoadManager SaveManager => saveManager;
+    public TaskQueueController QueueController => queueController;
     public StageController StageController;
     public TaskRunner TaskRunner { get; private set; }
 
@@ -59,7 +61,7 @@ public class GameManager : MonoBehaviour
             StageController.Initialization(TaskRunner.transform);
 
             UI_Manager.instance.OpenPage(UI_Manager.instance.GetPageOfType<HUDPage>());
-            TaskQueueController.Reset();
+            //TaskQueue.Reset();
 
             State = GameState.StageStarted;
         };
@@ -85,14 +87,16 @@ public class GameManager : MonoBehaviour
                     //reset game
                     StageController.ResetLights();
                     StageController.ResetCharacter(TaskRunner.transform);
-                    TaskQueueController.ResetIndex();
+                    //TaskQueue.ResetIndex();
                 }
                 break;
             case GameState.Play:
                 lastState = state;
-                TaskQueueController.PlayTasks();
+                QueueController.Run();
                 break;
-            case GameState.FinishTasks:
+            case GameState.CompleteTasks:
+                break;
+            case GameState.FailedTasks:
                 break;
         }
 
@@ -108,6 +112,7 @@ public class GameManager : MonoBehaviour
         SelectLevel,
         StageStarted,
         Play,
-        FinishTasks
+        CompleteTasks,
+        FailedTasks
     }
 }

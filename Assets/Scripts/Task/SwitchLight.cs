@@ -11,13 +11,15 @@ public class SwitchLight : TaskBase
         if (currentBlock is LightBlock lightBlock)
         {
             lightBlock.SwitchState();
-            TaskQueueController.CompleteTask();
+            OnComplete(true);
+            //TaskQueue.CompleteTask();
             return true;
         }
         else
         {
-            GameManager.instance.StageController.FailMove();
+            OnComplete(false);
             return false;
         }
     }
+
 }

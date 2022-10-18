@@ -18,13 +18,14 @@ public class Jump : TaskBase
             var endValue = new Vector3(nextBlock.transform.position.x, characterTransform.position.y + height, nextBlock.transform.position.z);
             characterTransform.DOMove(endValue, 1).OnComplete(() =>
             {
-                TaskQueueController.CompleteTask();
+                OnComplete(true);
+                //TaskQueue.CompleteTask();
             });
             GameManager.instance.StageController.SuccessMove(nextBlock);
             return true;
         }
 
-        GameManager.instance.StageController.FailMove();
+        OnComplete(false);
         return false;
     }
 }
