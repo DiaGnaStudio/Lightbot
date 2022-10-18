@@ -326,3 +326,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   contant: {fileID: 4974764525401102875}
   nameText: {fileID: 1838797363749522444}
+  selectedColor: {r: 0.5660378, g: 0.055535767, b: 0.36437756, a: 0.39215687}
+  unselectedColor: {r: 0.8509804, g: 0.3137255, b: 0.627451, a: 0.39215687}

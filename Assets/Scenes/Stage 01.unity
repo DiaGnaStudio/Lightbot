@@ -742,7 +742,7 @@ GameObject:
   - component: {fileID: 1721862473}
   - component: {fileID: 1721862472}
   m_Layer: 0
-  m_Name: Stage Data1
+  m_Name: Stage Data
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -768,7 +768,6 @@ MonoBehaviour:
   availableTask:
   - {fileID: 11400000, guid: cdbf59e09acc8e34c905ac25d208082e, type: 2}
   - {fileID: 11400000, guid: c527ac64bb657f04db0a58e7778d5615, type: 2}
-  - {fileID: 11400000, guid: 68d1fbffc3514ee438a0e0df37d3ef94, type: 2}
 --- !u!4 &1721862473
 Transform:
   m_ObjectHideFlags: 0

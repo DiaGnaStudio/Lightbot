@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   name: 
   icon: {fileID: 21300000, guid: f61f2994a450ab241b96639c481b3e13, type: 3}
-  speed: 0
+  speed: 2
   diraction: 0

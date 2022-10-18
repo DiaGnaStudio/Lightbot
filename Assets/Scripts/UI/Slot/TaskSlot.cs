@@ -7,8 +7,6 @@ public class TaskSlot : MonoBehaviour
     [SerializeField] private Button _button;
     [SerializeField] private Image _icon;
 
-    int queueIndex = 0;
-
     public void SetButtonAction(System.Action callback)
     {
         _button.onClick.RemoveAllListeners();
@@ -18,7 +16,6 @@ public class TaskSlot : MonoBehaviour
     public void Init(TaskBase task, int queueIndex = 0)
     {
         _icon.sprite = task.Icon;
-        this.queueIndex = queueIndex;
 
         var page = UI_Manager.instance.GetPageOfType<HUDPage>();
         if (queueIndex != -1)

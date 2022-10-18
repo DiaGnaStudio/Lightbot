@@ -5,8 +5,7 @@ using DG.Tweening;
 public class Jump : TaskBase
 {
     [SerializeField] private float speed;
-    [SerializeField] private float jumpSpeed;
-
+    DG.Tweening.Core.TweenerCore<Vector3, Vector3, DG.Tweening.Plugins.Options.VectorOptions> tweener;
     public override bool Run(Transform characterTransform)
     {
         Block nextBlock = null;
@@ -16,7 +15,8 @@ public class Jump : TaskBase
         if (nextBlock != null)
         {
             var endValue = new Vector3(nextBlock.transform.position.x, characterTransform.position.y + height, nextBlock.transform.position.z);
-            characterTransform.DOMove(endValue, 1).OnComplete(() =>
+            var duraction = CalculateDuraction(characterTransform, endValue,speed);
+            tweener =  characterTransform.DOMove(endValue, duraction).OnComplete(() =>
             {
                 OnComplete(true);
                 //TaskQueue.CompleteTask();
@@ -24,8 +24,19 @@ public class Jump : TaskBase
             GameManager.instance.StageController.SuccessMove(nextBlock);
             return true;
         }
+        else
+        {
 
-        OnComplete(false);
-        return false;
+            OnComplete(false);
+            return false;
+        }
+    }
+
+    public override void Stop()
+    {
+        if (tweener != null)
+        {
+            tweener.Kill();
+        }
     }
 }

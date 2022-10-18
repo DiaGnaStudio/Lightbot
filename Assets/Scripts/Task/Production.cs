@@ -11,7 +11,6 @@ public class Production : TaskBase
     {
         queue = GameManager.instance.QueueController.GetProductionQueue();
 
-
         queue.onComplete = (value) =>
         {
             if(value)
@@ -46,5 +45,10 @@ public class Production : TaskBase
     {
         tasks.Remove(task);
         queue = new TaskQueueController.Queue(tasks);
+    }
+
+    public override void Stop()
+    {
+        queue.ForceStop();
     }
 }

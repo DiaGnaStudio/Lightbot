@@ -4,6 +4,9 @@ using UnityEngine;
 public class TaskQueueController : MonoBehaviour
 {
     List<Queue> queues = new List<Queue>();
+    const int mainQueueIndex = 0;
+    const int mainQueueLimit = 12;
+    const int otherQueueLimit = 8;
 
     private void Start()
     {
@@ -26,9 +29,15 @@ public class TaskQueueController : MonoBehaviour
         queues.Add(new Queue(tasks));
     }
 
-    public void AddTask(TaskBase newTask, int queueIndex = 0)
+    public bool AddTask(TaskBase newTask, int queueIndex = 0)
     {
+        var limit = queueIndex == mainQueueIndex ? mainQueueLimit : otherQueueLimit;
+        if (queues[queueIndex].Tasks.Count >= limit)
+        {
+            return false;
+        }
         queues[queueIndex].Add(newTask);
+        return true;
     }
 
     public void RemoveTask(TaskBase oldTask, int queueIndex = 0)
@@ -53,18 +62,14 @@ public class TaskQueueController : MonoBehaviour
 
         public void Add(TaskBase newTask)
         {
-            if (Tasks.Count >= 12) return;
             Tasks.Add(newTask);
             TaskAdded?.Invoke(newTask);
         }
 
         public void Remove(TaskBase oldTask)
         {
-            if (Tasks.Contains(oldTask))
-            {
-                Tasks.Remove(oldTask);
-                TaskRemoved?.Invoke(oldTask);
-            }
+            Tasks.Remove(oldTask);
+            TaskRemoved?.Invoke(oldTask);
         }
 
         public TaskBase Peek()
@@ -79,9 +84,14 @@ public class TaskQueueController : MonoBehaviour
 
         public void Run()
         {
-            if (queue == null)
+            if (!isRunning && queue == null)
             {
                 queue = new Queue<TaskBase>(Tasks);
+                isRunning = true;
+            }
+            else if (!isRunning)
+            {
+                return;
             }
             else if (queue.Count == 0)
             {
@@ -106,6 +116,17 @@ public class TaskQueueController : MonoBehaviour
                 GameManager.instance.State = GameManager.GameState.FailedTasks;
             }
         }
+
+        private bool isRunning;
+
+        public void ForceStop()
+        {
+            isRunning = false;
+            foreach (var task in Tasks)
+            {
+                task.Stop();
+            }
+        }
     }
 
     public Queue GetProductionQueue()
@@ -121,13 +142,12 @@ public class TaskQueueController : MonoBehaviour
 
     #region RUN QUEUE
 
-    const int mainQueueIndex = 0;
 
     public void Run()
     {
-        var x = queues[mainQueueIndex];
-        x.onComplete = CompleteQueue;
-        x.Run();
+        var mainQueue = queues[mainQueueIndex];
+        mainQueue.onComplete = CompleteQueue;
+        mainQueue.Run();
     }
 
     /// <summary>
@@ -151,4 +171,20 @@ public class TaskQueueController : MonoBehaviour
     }
 
     #endregion
+
+    public void Stop()
+    {
+        foreach (var queue in queues)
+        {
+            queue.ForceStop();
+        }
+    }
+
+    public void ResetController()
+    {
+        queues = new List<Queue>
+        {
+            new Queue(new List<TaskBase>()) // main queue
+        };
+    }
 }

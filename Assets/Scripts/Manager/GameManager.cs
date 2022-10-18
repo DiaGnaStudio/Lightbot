@@ -35,37 +35,37 @@ public class GameManager : MonoBehaviour
             instance = this;
             DontDestroyOnLoad(gameObject);
 
+            var ui = FindObjectOfType<UI_Manager>();
+            ui.Initialization();
+
             StageController ??= FindObjectOfType<StageController>();
             TaskRunner ??= FindObjectOfType<TaskRunner>();
 
             StageController.Initialization(TaskRunner.transform);
 
-            var ui = FindObjectOfType<UI_Manager>();
-            ui.Initialization();
-
             State = GameState.SelectLevel;
+
+            LevelManager.onChangeScene += () =>
+            {
+                var ui = FindObjectOfType<UI_Manager>();
+                ui.Initialization();
+
+                StageController = FindObjectOfType<StageController>();
+                TaskRunner = FindObjectOfType<TaskRunner>();
+
+                StageController.Initialization(TaskRunner.transform);
+
+                QueueController.ResetController();
+
+                State = GameState.StageStarted;
+            };
+
+            
         }
         else
         {
             Destroy(gameObject);
         }
-
-        LevelManager.onChangeScene += () =>
-        {
-            var ui = FindObjectOfType<UI_Manager>();
-            ui.Initialization();
-
-            StageController = FindObjectOfType<StageController>();
-            TaskRunner = FindObjectOfType<TaskRunner>();
-
-            StageController.Initialization(TaskRunner.transform);
-
-            UI_Manager.instance.OpenPage(UI_Manager.instance.GetPageOfType<HUDPage>());
-            //TaskQueue.Reset();
-
-            State = GameState.StageStarted;
-        };
-
     }
 
     private void HandleLastState(GameState state)
@@ -78,16 +78,9 @@ public class GameManager : MonoBehaviour
                 UI_Manager.instance.OpenPage(UI_Manager.instance.GetPageOfType<LevelPage>());
                 break;
             case GameState.StageStarted:
-                if (lastState == GameState.SelectLevel || lastState == GameState.None)
+                if (lastState != GameState.Play)
                 {
                     UI_Manager.instance.OpenPage(UI_Manager.instance.GetPageOfType<HUDPage>());
-                }
-                else
-                {
-                    //reset game
-                    StageController.ResetLights();
-                    StageController.ResetCharacter(TaskRunner.transform);
-                    //TaskQueue.ResetIndex();
                 }
                 break;
             case GameState.Play:
@@ -97,6 +90,13 @@ public class GameManager : MonoBehaviour
             case GameState.CompleteTasks:
                 break;
             case GameState.FailedTasks:
+                break;
+            case GameState.None:
+                break;
+            case GameState.ResetStage:
+                StageController.ResetLights();
+                StageController.ResetCharacter(TaskRunner.transform);
+                QueueController.Stop();
                 break;
         }
 
@@ -113,6 +113,7 @@ public class GameManager : MonoBehaviour
         StageStarted,
         Play,
         CompleteTasks,
-        FailedTasks
+        FailedTasks,
+        ResetStage
     }
 }

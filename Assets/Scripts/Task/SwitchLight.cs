@@ -22,4 +22,8 @@ public class SwitchLight : TaskBase
         }
     }
 
+    public override void Stop()
+    {
+        
+    }
 }

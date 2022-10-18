@@ -1,6 +1,6 @@
-﻿using UnityEngine;
+﻿using TMPro;
+using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class LevelSlot : MonoBehaviour
 {
@@ -14,7 +14,6 @@ public class LevelSlot : MonoBehaviour
 
     private Button button;
 
-    [EasyButtons.Button]
     public void SetValue(SlotMode slotMode, int index)
     {
         button = GetComponentInChildren<Button>();
@@ -23,38 +22,53 @@ public class LevelSlot : MonoBehaviour
 
         lockObject.SetActive(false);
 
-        numberText.SetText((index+1).ToString());
+        numberText.SetText((index + 1).ToString());
 
         switch (slotMode)
         {
             case SlotMode.Locked:
-                lockObject.SetActive(true);
-                backgroundImage.color = lockedColor;
+                LockedCallback();
                 break;
             case SlotMode.Passed:
-                backgroundImage.color = passedColor;
-                button.interactable = true;
-                button.onClick.AddListener(() =>
-                {
-                    if (LevelManager.GetActiveIndex() == index)
-                    {
-                        GameManager.instance.State = GameManager.GameState.StageStarted;
-                    }
-                    else
-                    {
-                        LevelManager.LoadScene(index);
-                    }
-                });
+                PassedCallback(index);
                 break;
             case SlotMode.Current:
-                backgroundImage.color = activeColor;
-                button.interactable = true;
-                button.onClick.AddListener(() =>
-                {
-                    GameManager.instance.State = GameManager.GameState.StageStarted;
-                });
+                CurrentCallback();
                 break;
         }
+    }
+
+    private void LockedCallback()
+    {
+        lockObject.SetActive(true);
+        backgroundImage.color = lockedColor;
+    }
+
+    private void PassedCallback(int index)
+    {
+        backgroundImage.color = passedColor;
+        button.interactable = true;
+        button.onClick.AddListener(() =>
+        {
+            if (LevelManager.GetActiveIndex() == index)
+            {
+                GameManager.instance.State = GameManager.GameState.StageStarted;
+            }
+            else
+            {
+                LevelManager.LoadScene(index);
+            }
+        });
+    }
+
+    private void CurrentCallback()
+    {
+        backgroundImage.color = activeColor;
+        button.interactable = true;
+        button.onClick.AddListener(() =>
+        {
+            GameManager.instance.State = GameManager.GameState.StageStarted;
+        });
     }
 
     public enum SlotMode

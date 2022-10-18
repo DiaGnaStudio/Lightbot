@@ -1,8 +1,14 @@
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public static class LevelManager
+public class LevelManager :MonoBehaviour
 {
     public static System.Action onChangeScene;
+
+    private void Start()
+    {
+        SceneManager.sceneLoaded += SceneManager_sceneLoaded;
+    }
 
     public static int GetActiveIndex()
     {
@@ -16,11 +22,8 @@ public static class LevelManager
 
     public static void LoadScene(int index)
     {
-        SceneManager.LoadScene(index);
+        SceneManager.LoadScene(index % GetAllSceneCount());
 
-        SceneManager.sceneLoaded -= SceneManager_sceneLoaded;
-        SceneManager.sceneLoaded += SceneManager_sceneLoaded;
-        
         if (index > GameManager.instance.SaveManager.CurrentLevel)
         {
             // new level unlocked

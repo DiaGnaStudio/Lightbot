@@ -18,9 +18,7 @@ public class UI_Manager : MonoBehaviour
         if (instance == null)
         {
             instance = this;
-            DontDestroyOnLoad(gameObject);
-
-
+            DontDestroyOnLoad(this);
             #region Get Pages, Dialogs and Elements
 
             allPages = GetComponentsInChildren<PageBase>(true);
@@ -61,6 +59,7 @@ public class UI_Manager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+
     }
 
     #region Page's functions

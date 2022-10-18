@@ -20,7 +20,7 @@ public class SaveOrLoadManager : MonoBehaviour
             {
                 val = 0;
             }
-            return 30;
+            return val;
         }
         set
         {

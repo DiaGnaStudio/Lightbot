@@ -13,12 +13,7 @@ public class HUDPage : PageBase
     [SerializeField] private Transform taskSlotsParent;
     [Space]
     [SerializeField] private QueuePanel queuePanelPrefab;
-    //[SerializeField] private GameObject mainQueue;
     [SerializeField] private Transform queuePanelParent;
-
-    //[Space]
-    //[SerializeField] private GameObject productionQueue;
-    //[SerializeField] private Transform productionQueueParent;
 
     [Header("Button")]
     [SerializeField] private GameObject nextLevelObject;
@@ -38,9 +33,8 @@ public class HUDPage : PageBase
         CreateTaskSlots();
         foreach(var panel in queuePanels.Values)
         {
-            panel.Destroy();
+            Destroy(panel.gameObject);
         }
-
         CheckProductionMode();
     }
 
@@ -53,7 +47,6 @@ public class HUDPage : PageBase
 
         GameManager.instance.OnStateChange += OnChangeGameState;
 
-        SetPlayButtonClick();
         SetNextLevelButtonClick();
     }
 
@@ -63,14 +56,10 @@ public class HUDPage : PageBase
 
         var mainQueuePanel = Instantiate(queuePanelPrefab, queuePanelParent);
         mainQueuePanel.Create(0);
-
         queuePanels.Add(0, mainQueuePanel);
 
         if (GameManager.instance.StageController.HasProductionTask)
         {
-            Debug.Log("Create");
-            //productionQueue.SetActive(true);
-
             var group = queuePanelParent.gameObject.AddComponent<ToggleGroup>();
 
             var count = GameManager.instance.StageController.GetAvailableTasks().FindAll(x => x is Production).Count;
@@ -89,40 +78,13 @@ public class HUDPage : PageBase
                 queuePanels.Add(panelIndex, newQueuePanel);
             }
 
-            //productionQueue.transform.SetParent(newParent.transform);
-            //var productionToggle = productionQueue.AddComponent<Toggle>();
-            //productionToggle.group = group;
-            //productionToggle.targetGraphic = productionQueue.GetComponentInChildren<Image>();
-            //productionToggle.onValueChanged.AddListener((value) =>
-            //{
-            //    if (value)
-            //    {
-            //        activeQueue = Queue.ProductionQueue;
-            //    }
-            //});
-
-
             var mainToggle = mainQueuePanel.Create(0, queuePanelParent);
             mainToggle.onValueChanged.AddListener((value) =>
             {
                 ToggleListener(value, 0);
             });
 
-            //mainQueue.transform.SetParent(newParent.transform);
-            //var mainToggle = mainQueue.AddComponent<Toggle>();
-            //mainToggle.group = group;
-            //mainToggle.targetGraphic = mainQueue.GetComponentInChildren<Image>();
-            //mainToggle.onValueChanged.AddListener((value) =>
-            //{
-            //    if (value)
-            //    {
-            //        activeQueue = Queue.MainQueue;
-            //    }
-            //});
-
-            //mainToggle.isOn = true;
-            //mainToggle.isOn = true;
-            //activeQueue = Queue.MainQueue;
+            mainToggle.isOn = true;
         }
 
         void ToggleListener(bool value, int panelIndex)
@@ -137,33 +99,6 @@ public class HUDPage : PageBase
     private void OnDestroy()
     {
         GameManager.instance.OnStateChange -= OnChangeGameState;
-    }
-
-    private void SetPlayButtonClick()
-    {
-        playButton.onClick.RemoveAllListeners();
-        playButton.onClick.AddListener(() =>
-        {
-            switch (GameManager.instance.State)
-            {
-                case GameManager.GameState.StageStarted:
-                    //play mode
-                    GameManager.instance.State = GameManager.GameState.Play;
-                    break;
-                case GameManager.GameState.Play:
-                    //stop mode
-                    GameManager.instance.State = GameManager.GameState.StageStarted;
-                    break;
-                case GameManager.GameState.CompleteTasks:
-                    //retry mode
-                    GameManager.instance.State = GameManager.GameState.StageStarted;
-                    break;
-                case GameManager.GameState.SelectLevel:
-                    //none
-                    break;
-            }
-
-        });
     }
 
     private void SetNextLevelButtonClick()
@@ -185,22 +120,20 @@ public class HUDPage : PageBase
             newSlot.Init(task, -1);
             newSlot.SetButtonAction(() =>
             {
-                GameManager.instance.QueueController.AddTask(task, activeQueueIndex);
-                AddQueueTask(task);
+                var added = GameManager.instance.QueueController.AddTask(task, activeQueueIndex);
+                if (added)
+                {
+                    AddQueueTask(task);
+                }
             });
         }
     }
 
-    public void AddQueueTask(TaskBase task)
+    private void AddQueueTask(TaskBase task)
     {
         Transform parent = queuePanels[activeQueueIndex].Contant;
         var newSlot = Instantiate(slotPrefab, parent);
         newSlot.Init(task, activeQueueIndex);
-    }
-
-    private void RemoveQueueTask(TaskBase oldTask)
-    {
-
     }
 
     private void OnChangeGameState(GameManager.GameState state)
@@ -211,38 +144,59 @@ public class HUDPage : PageBase
 
     private void ActiveNextLevelButton(GameManager.GameState state)
     {
-        if (state == GameManager.GameState.CompleteTasks && GameManager.instance.StageController.CheckLights())
-        {
-            nextLevelObject.SetActive(true);
-        }
-        else
-        {
-            nextLevelObject.SetActive(false);
-        }
+        nextLevelObject.SetActive(state == GameManager.GameState.CompleteTasks && GameManager.instance.StageController.CheckLights());
     }
 
     private void SetPlayButtonSkin(GameManager.GameState state)
     {
+        playButton.onClick.RemoveAllListeners();
         switch (state)
         {
             case GameManager.GameState.StageStarted:
-                //play mode
-                playButtonImage.sprite = playSprite;
-                playButtonText.SetText("Play");
+            case GameManager.GameState.ResetStage:
+                PlayMode();
                 break;
             case GameManager.GameState.Play:
-                //stop mode
-                playButtonImage.sprite = stopSprite;
-                playButtonText.SetText("Stop");
+                StopMode();
                 break;
+            case GameManager.GameState.FailedTasks:
             case GameManager.GameState.CompleteTasks:
-                //retry mode
-                playButtonImage.sprite = retrySprite;
-                playButtonText.SetText("Retry");
+                RetryMode();
                 break;
             case GameManager.GameState.SelectLevel:
+            case GameManager.GameState.None:
                 //none
                 break;
         }
+    }
+
+    private void PlayMode()
+    {
+        playButtonImage.sprite = playSprite;
+        playButtonText.SetText("Play");
+        playButton.onClick.AddListener(() =>
+        {
+            GameManager.instance.State = GameManager.GameState.Play;
+        });
+    }
+
+    private void StopMode()
+    {
+        playButtonImage.sprite = stopSprite;
+        playButtonText.SetText("Stop");
+        playButton.onClick.AddListener(() =>
+        {
+            GameManager.instance.State = GameManager.GameState.ResetStage;
+        });
+    }
+
+    private void RetryMode()
+    {
+        playButtonImage.sprite = retrySprite;
+        playButtonText.SetText("Retry");
+        playButton.onClick.AddListener(() =>
+        {
+            GameManager.instance.State = GameManager.GameState.ResetStage;
+        });
     }
 }
